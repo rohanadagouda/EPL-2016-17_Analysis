@@ -7,8 +7,12 @@ library(lubridate)
 library(stringr)
 library(ggthemes)
 library(data.table)
+library(gridExtra)
 
 Strata <- read.csv("Chances.csv",header = TRUE)
+Strata_PNG <- readPNG("StrataBet Logo.png")
+rast <- grid::rasterGrob(Strata_PNG)
+
 str(Strata)
 
 #Converting the values from Factor to Numeric
@@ -43,6 +47,7 @@ ChancesPerTeam_OpenPlay <- ggplot() +
   geom_text(data=Chance,aes(x =team,y=N, label =N), size=4, vjust=-1)+
   geom_line(data=Goal,aes(x=team,y=N,group = 1,color=N))+
   geom_text(data=Goal,aes(x =team,y=N, label = N), color="white",size=3, vjust=-1)+
+  annotation_custom(rast,ymin = 1,xmin = 3,xmax = 10)+
   scale_y_continuous(breaks = seq(0,650,50))+
   theme(axis.line = element_line(size=1, colour = "black"),
         panel.border = element_blank(),
@@ -71,7 +76,8 @@ for (i in 1:nrow(Player)) {
     geom_segment(data = Player,aes(x=primaryLocation_x,y=primaryLocation_y,xend=location_x,yend=location_y,color=primaryType)
                  ,na.rm = TRUE,arrow=arrow(length=unit(0.16,"cm"),angle = 30 ,type = "closed" )) 
 }
-KDB_Assists <- Pass_Map+ geom_segment(aes(x = -136, xend = 136, y = 210, yend = 210),color="white",size=0.8)+
+KDB_Assists <- Pass_Map+ annotation_custom(rast,ymin = 380,ymax = 420,xmin = 10,xmax = 136)+
+  geom_segment(aes(x = -136, xend = 136, y = 210, yend = 210),color="white",size=0.8)+
   geom_segment(aes(x = -37, xend = 37, y = 22, yend = 22),color="white",size=0.6) +
   geom_segment(aes(x = -81, xend = 81, y = 66, yend = 66),color="white",size=0.6)+
   geom_segment(aes(x = 37, xend = 37, y = 0, yend = 22),color="white",size=0.6)+
@@ -110,6 +116,7 @@ Own_Goals <- ggplot(OG, aes(x=Own.Goals.Gained,y=team, label=Own.Goals.Gained)) 
   geom_count(show.legend=F,size=5)+
   geom_segment(aes(y=team,yend=team, x=1,xend=Own.Goals.Gained))+
   geom_text(color="white", size=2.5)+
+  annotation_custom(rast,xmin = 3,xmax = 5,ymin = 3)+
   labs(title="Own Goals Gained Plot")+
   theme(axis.text.x = element_blank(),
         axis.title.x = element_blank(),
