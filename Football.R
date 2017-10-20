@@ -5,13 +5,14 @@ library(ggrepel)
 library(Hmisc)
 library(lubridate)
 library(stringr)
+library(png)
 library(ggthemes)
 library(data.table)
-library(gridExtra)
+library(grid)
 
 Strata <- read.csv("Chances.csv",header = TRUE)
 Strata_PNG <- readPNG("StrataBet Logo.png")
-rast <- grid::rasterGrob(Strata_PNG)
+rast <- rasterGrob(Strata_PNG)
 
 str(Strata)
 
@@ -20,6 +21,9 @@ Strata$location_x <- as.numeric(as.character(Strata$location_x))
 Strata$location_y <- as.numeric(as.character(Strata$location_y))
 Strata$primaryLocation_x <- as.numeric(as.character(Strata$primaryLocation_x))
 Strata$primaryLocation_y <- as.numeric(as.character(Strata$primaryLocation_y))
+Strata$primaryPlayer <- as.character(Strata$primaryPlayer)
+Strata$player <- as.character(Strata$player)
+
 str(Strata)
 
 #Converting Characters to Lower Case 
@@ -32,8 +36,7 @@ listofColors <- c("#89C5DA", "#DA5724", "#74D944", "#CE50CA", "#3F4921", "#C0717
 
 
 
-
-#Chances created during open play and goals scored
+#============Chances created during open play and goals scored===============
 Chance <- Strata %>% filter(type %in% c("open play"),chanceRating!="-")%>% select(team,type,chanceRating)
 Chance <- as.data.frame(table(Chance))
 Chance <- Chance %>% select(team,Freq) %>% group_by(team) %>% summarise(N =sum(Freq))
@@ -58,6 +61,8 @@ ChancesPerTeam_OpenPlay <- ggplot() +
 #Saving the GGPLOT into a PNG
 ggsave(filename = "ChancesPerTeam_OpenPlay.png",device = "png",width = 10,height = 8,units = "in",
        limitsize = FALSE)
+
+
 
 
 
@@ -101,6 +106,52 @@ KDB_Assists <- Pass_Map+ annotation_custom(rast,ymin = 380,ymax = 420,xmin = 10,
 #Saving the GGPLOT into a PNG
 ggsave(filename = "KDB_Assists.png",device = "png",width = 10,height = 8,units = "in",
        limitsize = FALSE)
+
+
+
+#=========================Chances Created by Top Six=============
+library(treemapify)
+library(magick)
+#Filter to get Top six Teams along with players and Chance Rating
+Chances_Top_Six <- Strata%>% 
+  filter(chanceRating %nin% c("-","Penalty","poorchance"),primaryPlayer %nin% c("-"),
+         team %in% c("Arsenal","Chelsea","Liverpool","Manchester City","Manchester United","Tottenham Hotspur") )%>% 
+  select(team,primaryPlayer) %>% 
+  group_by(primaryPlayer,team) %>% 
+  summarise(N=n()) 
+
+#Top Six Teams in EPL
+Top_Six <- c("Arsenal","Chelsea","Liverpool","Manchester City","Manchester United","Tottenham Hotspur")
+TColors <- rep(c("red","darkblue","black"),3)
+
+# Make plots
+plot_list = list()
+for (i in 1:NROW(Top_Six)) {
+Chances_10 <- Chances_Top_Six %>% filter(N >= 10)   
+Chances_10 <- Chances_10 %>% filter(team %in% Top_Six[i])
+p <- ggplot(Chances_10, aes(area = N ,fill=N,label = primaryPlayer)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre",
+                    reflow = TRUE)+
+  scale_fill_gradient(low = TColors[i],high = TColors[i+1])+
+  labs( title = Top_Six[i], fill = "Chances Created" )
+plot_list[[i]] = p
+}
+
+#create png where each page is a separate plot
+png("p%02d.png")
+for (i in 1:NROW(Top_Six)) {
+  print(plot_list[[i]])
+}
+dev.off()
+
+png.files <- sprintf("p%02d.png", 1:NROW(Top_Six))
+#Need to create  magick image object for animation and gif.Since using Magick Package
+animation <- image_read(png.files)
+animation <- image_animate(animation,fps = 1)
+#print(animation)
+image_write(animation, "Chances_by_Top_Six.gif")
+
 
 #=============================Own Goal Gained by Teams================================
 
